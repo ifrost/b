@@ -1,3 +1,11 @@
+<html>
+    <head>
+    </head>
+    <body>
+        <div id="content"></div>
+        <script>
+            
+            
 async function getData() {
     var data = await fetch("https://dl.dropboxusercontent.com/s/4xsatr8ujknxony/baby.log");
     var logs = (await data.text()).split('\n').reverse().filter(l => !!l.trim().length)
@@ -24,3 +32,10 @@ function parser(line) {
 }
 
 await getData();
+            
+            
+        </script>    
+    </body>
+    </html>
+
+
