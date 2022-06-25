@@ -39,7 +39,7 @@ async function getData() {
             }
         }
 
-        var datetimeDisplay = datetime.toString().split('(')[0];
+        var datetimeDisplay = datetime.getHours().toString().padStart(2,'0') + ':' + datetime.getMinutes().toString().padStart(2,'0') + ' ' + datetime.getDate() + '/' + (datetime.getMonth() + 1);
         var a = d['amount'] !== '0' ? ' / ' + d.amount + ' ml' : ' / ~' + d.duration * F + ' ml';
         return `${datetimeDisplay.toString()} ${t} ${d['duration']} min${a}`
     }).filter(l => !!l.trim().length);;
