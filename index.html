@@ -4,22 +4,41 @@
     <body>
         <div id="content"></div>
         <script>
-            
-            
+
+const F = 3;
+
 async function getData() {
     var data = await fetch("https://dl.dropboxusercontent.com/s/4xsatr8ujknxony/baby.log");
-    var logs = (await data.text()).split('\n').reverse().filter(l => !!l.trim().length)
+    var logs = (await data.text()).split('\n').reverse().filter(l => !!l.trim().length);
+    var total24h = 0;
+    var total24hLimit = (new Date()).getTime() - 4 * 24 * 60 * 60 * 1000;
+    var breastD = 0;
+    var bottleD = 0;
     var display = logs.map((log) => {
         var d = parser(log);
         var t = d['type'] === 'bottle' ? '🍼' : '🤱';
         var time = d['timestamp'];
         var datetime = new Date();
         datetime.setTime(parseInt(time));
+
+        if (datetime.getTime() < total24hLimit) {
+            return '';
+        } else {
+            var am = parseInt(d.amount);
+            var dr = parseInt(d.duration);
+            total24h += d.type === 'breast' ? dr * F : am
+            if (d.type === 'breast') {
+                breastD += dr;
+            } else {
+                bottleD += dr;
+            }
+        }
+
         var datetimeDisplay = datetime.toString().split('(')[0];
-        var a = d['amount'] !== '0' ? ' / ' + d.amount + ' ml' : '';
+        var a = d['amount'] !== '0' ? ' / ' + d.amount + ' ml' : ' / ~' + d.duration * F + ' ml';
         return `${datetimeDisplay.toString()} ${t} ${d['duration']} min${a}`
-    });
-    document.body.innerHTML = '<pre>'+display.join('\n')+'</pre>';
+    }).filter(l => !!l.trim().length);;
+    document.body.innerHTML = '<pre>'+`Last 24h: ${total24h} ml / ${breastD + bottleD} min (${bottleD} 🍼 + ${breastD} 🤱)\n`+display.join('\n')+'</pre>';
 }
 
 function parser(line) {
@@ -32,9 +51,9 @@ function parser(line) {
 }
 
 getData();
-            
-            
-        </script>    
+
+
+        </script>
     </body>
     </html>
 
