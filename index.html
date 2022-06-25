@@ -1,8 +1,15 @@
 <html>
     <head>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto+Mono">
         <style>
+            body {
+                background-color: black;
+                color: white;
+                padding: 10px;
+            }
             pre {
-                font-size: 40px;
+                font-size: 35px;
+                font-family: "Roboto Mono", Courier;
             }
         </style>
     </head>
@@ -40,10 +47,10 @@ async function getData() {
         }
 
         var datetimeDisplay = datetime.getHours().toString().padStart(2,'0') + ':' + datetime.getMinutes().toString().padStart(2,'0') + ' ' + datetime.getDate() + '/' + (datetime.getMonth() + 1);
-        var a = d['amount'] !== '0' ? ' / ' + d.amount + ' ml' : ' / ~' + d.duration * F + ' ml';
-        return `${datetimeDisplay.toString()} ${t} ${d['duration']} min${a}`
+        var a = d['amount'] !== '0' ?  d.amount + ' ml' : d.duration * F + ' ml';
+        return `${datetimeDisplay.toString()} ${t} ${a} / 00:${d['duration'].toString().padStart(2,'0')}`
     }).filter(l => !!l.trim().length);;
-    document.body.innerHTML = '<pre>'+`Last 24h: ${total24h} ml / ${breastD + bottleD} min (${bottleD} 🍼 + ${breastD} 🤱)\n---\n`+display.join('\n')+'</pre>';
+    document.body.innerHTML = '<pre>'+`24h: ${total24h} ml / ${breastD + bottleD} min (${bottleD}🍼 + ${breastD}🤱)\n---\n`+display.join('\n')+'</pre>';
 }
 
 function parser(line) {
