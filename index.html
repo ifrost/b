@@ -1,0 +1,26 @@
+async function getData() {
+    var data = await fetch("https://dl.dropboxusercontent.com/s/4xsatr8ujknxony/baby.log");
+    var logs = (await data.text()).split('\n').reverse().filter(l => !!l.trim().length)
+    var display = logs.map((log) => {
+        var d = parser(log);
+        var t = d['type'] === 'bottle' ? '🍼' : '🤱';
+        var time = d['timestamp'];
+        var datetime = new Date();
+        datetime.setTime(parseInt(time));
+        var datetimeDisplay = datetime.toString().split('(')[0];
+        var a = d['amount'] !== '0' ? ' / ' + d.amount + ' ml' : '';
+        return `${datetimeDisplay.toString()} ${t} ${d['duration']} min${a}`
+    });
+    document.body.innerHTML = '<pre>'+display.join('\n')+'</pre>';
+}
+
+function parser(line) {
+    var dict = {};
+    line.split(' ').forEach((kv) => {
+        var [key, value] = kv.split('=');
+        dict[key] = value;
+    });
+    return dict;
+}
+
+await getData();
