@@ -11,7 +11,7 @@ async function getData() {
     var data = await fetch("https://dl.dropboxusercontent.com/s/4xsatr8ujknxony/baby.log");
     var logs = (await data.text()).split('\n').reverse().filter(l => !!l.trim().length);
     var total24h = 0;
-    var total24hLimit = (new Date()).getTime() - 4 * 24 * 60 * 60 * 1000;
+    var total24hLimit = (new Date()).getTime() - 24 * 60 * 60 * 1000;
     var breastD = 0;
     var bottleD = 0;
     var display = logs.map((log) => {
@@ -38,7 +38,7 @@ async function getData() {
         var a = d['amount'] !== '0' ? ' / ' + d.amount + ' ml' : ' / ~' + d.duration * F + ' ml';
         return `${datetimeDisplay.toString()} ${t} ${d['duration']} min${a}`
     }).filter(l => !!l.trim().length);;
-    document.body.innerHTML = '<pre>'+`Last 24h: ${total24h} ml / ${breastD + bottleD} min (${bottleD} 🍼 + ${breastD} 🤱)\n`+display.join('\n')+'</pre>';
+    document.body.innerHTML = '<pre>'+`Last 24h: ${total24h} ml / ${breastD + bottleD} min (${bottleD} 🍼 + ${breastD} 🤱)\n---\n`+display.join('\n')+'</pre>';
 }
 
 function parser(line) {
