@@ -8,7 +8,7 @@
                 padding: 10px;
             }
             pre {
-                font-size: 35px;
+                font-size: 32px;
                 font-family: "Roboto Mono", Courier;
             }
         </style>
@@ -18,39 +18,81 @@
         <script>
 
 const F = 3;
+const TIMEFRAME = 24;
 
 async function getData() {
     var data = await fetch("https://dl.dropboxusercontent.com/s/4xsatr8ujknxony/baby.log");
     var logs = (await data.text()).split('\n').reverse().filter(l => !!l.trim().length);
     var total24h = 0;
-    var total24hLimit = (new Date()).getTime() - 24 * 60 * 60 * 1000;
+    var total24hLimit = (new Date()).getTime() - TIMEFRAME * 60 * 60 * 1000;
+
+    var total5h = 0;
+    var total5hLimit = (new Date()).getTime() - 5 * 60 * 60 * 1000;
+
+    var lastTimestamp = 0;
+    var totalFeedingDiffs = 0;
+    var totalFeedings = 0;
+
     var breastD = 0;
     var bottleD = 0;
+    var breastA = 0;
+    var bottleA = 0;
     var display = logs.map((log) => {
         var d = parser(log);
         var t = d['type'] === 'bottle' ? '🍼' : '🤱';
-        var time = d['timestamp'];
+        var time = parseInt(d['timestamp']);
+        var duration = parseInt(d.duration);
         var datetime = new Date();
-        datetime.setTime(parseInt(time));
+        datetime.setTime(time);
+
+        var currentTime = Date.now();
+
+        var enddatetime = new Date();
+        enddatetime.setTime(time + duration * 60 * 1000)
 
         if (datetime.getTime() < total24hLimit) {
             return '';
         } else {
             var am = parseInt(d.amount);
             var dr = parseInt(d.duration);
-            total24h += d.type === 'breast' ? dr * F : am
+            var drunk = d.type === 'breast' ? dr * F : am;
+            total24h += drunk;
+            if (datetime.getTime() >= total5hLimit) {
+                total5h += drunk;
+            }
             if (d.type === 'breast') {
                 breastD += dr;
+                breastA += drunk;
             } else {
                 bottleD += dr;
+                bottleA += drunk;
             }
         }
 
-        var datetimeDisplay = datetime.getHours().toString().padStart(2,'0') + ':' + datetime.getMinutes().toString().padStart(2,'0') + ' ' + datetime.getDate() + '/' + (datetime.getMonth() + 1);
+        if (lastTimestamp) {
+            totalFeedingDiffs += lastTimestamp - time;
+        }
+        lastTimestamp = time;
+        totalFeedings++;
+
+        var datetimeDisplay = formatDate(datetime,true);
+        var enddatetimeDisplay = formatDate(enddatetime,false);
+
+        var diff = (currentTime - enddatetime.getTime()) / 1000 / 60; // minutes
+        var diffHours = Math.floor(diff / 60)
+        var diffDisplay = diffHours.toString().padStart(2,'0') + ':' + (diff - diffHours * 60).toFixed(0).padStart(2,'0');
+
         var a = d['amount'] !== '0' ?  d.amount + ' ml' : d.duration * F + ' ml';
-        return `${datetimeDisplay.toString()} ${t} ${a} / 00:${d['duration'].toString().padStart(2,'0')}`
-    }).filter(l => !!l.trim().length);;
-    document.body.innerHTML = '<pre>'+`24h: ${total24h} ml / ${breastD + bottleD} min (${bottleD}🍼 + ${breastD}🤱)\n---\n`+display.join('\n')+'</pre>';
+        return `${datetimeDisplay}-${enddatetimeDisplay} ${t} ${a} 🕒 ${d['duration'].toString().padStart(2,'0')}′ -${diffDisplay}`
+    }).filter(l => !!l.trim().length);
+
+    var avgFeedGap = (totalFeedingDiffs / 1000 / 60 / 60) / totalFeedings;
+
+    document.body.innerHTML = '<pre>'+`${TIMEFRAME}h: ${total24h} ml (${bottleA}🍼+${breastA}🤱) ${breastD + bottleD} min (${bottleD}🍼+${breastD}🤱)\n5h: ${total5h} ml / feed every ${avgFeedGap.toFixed(1)}h\n---\n`+display.join('\n')+'</pre>';
+}
+
+function formatDate(datetime, short) {
+    return datetime.getHours().toString().padStart(2,'0') + ':' + datetime.getMinutes().toString().padStart(2,'0') + (!short ? ' ' + datetime.getDate() + '/' + (datetime.getMonth() + 1) : '');
 }
 
 function parser(line) {
