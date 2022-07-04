@@ -128,7 +128,7 @@
         const stats = {
             amount: {breast: 0, bottle: 0, total: 0},
             duration: {breast: 0, bottle: 0, total: 0},
-            feedFreq: ((logs[0].endTimestamp - logs[logs.length - 1].startTimestamp) / logs.length / 1000 / 60 / 60).toFixed(1),
+            feedFreq: logs.length >= 2 ? ((logs[0].startTimestamp - logs[logs.length - 1].startTimestamp) / logs.length / 1000 / 60 / 60).toFixed(1) : '-',
         }
         logs.forEach((log) => {
             stats.amount.total += log.amount;
