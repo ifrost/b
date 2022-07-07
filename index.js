@@ -3,7 +3,7 @@
     /**
      * ml per minute factor to use when amount is not provided
      */
-    const ML_PER_MINUTE = 3;
+    const ML_PER_MINUTE = 4;
 
     const load = async () => {
         const logs = await getData();
@@ -14,10 +14,11 @@
             {name: '5h', from: 5},
         ];
         const otherWindows = [
-            {name: 'week', from: 24 * 7},
-            {name: 'week-2', from: 24 * 7 * 2, to: 24 * 7},
-            {name: 'week-3', from: 24 * 7 * 3, to: 24 * 7 * 2},
-            {name: 'week-4', from: 24 * 7 * 4, to: 24 * 7 * 3},
+            // {name: 'month', from: 24 * 30, days: 30},
+            {name: 'week', from: 24 * 7, days: 7},
+            {name: 'week-2', from: 24 * 7 * 2, to: 24 * 7, days: 7},
+            {name: 'week-3', from: 24 * 7 * 3, to: 24 * 7 * 2, days: 7},
+            {name: 'week-4', from: 24 * 7 * 4, to: 24 * 7 * 3, days: 7},
 
             {name: '-1d', from: 24 * 2, to: 24 * 1},
             {name: '-2d', from: 24 * 3, to: 24 * 2},
@@ -53,6 +54,7 @@
             const filtered = logs.filter((l) => l.startTimestamp >= from && l.endTimestamp <= to)
             return {
                 name: w.name,
+                days: w.days,
                 stats: getStats(filtered),
             }
         });
@@ -117,7 +119,7 @@
 
     const formatStats = (stats) => {
         var s = stats.stats;
-        return `${stats.name}: ${s.amount.total} ml (${s.amount.bottle}🍼${s.amount.breast}🤱) ${s.duration.total} min (${s.duration.bottle}🍼${s.duration.breast}🤱) (${s.count}🖐️ ${s.feedFreq}h)`
+        return `${stats.name}: ${s.amount.total} ml (${s.amount.bottle}🍼${s.amount.breast}🤱) ${s.duration.total}′ (${s.duration.bottle}🍼${s.duration.breast}🤱) (${s.count}🖐️${stats.days > 1 ?  (s.count/stats.days).toFixed(1) + '☝️' : ''} ${s.feedFreq}h)`
     }
 
     const formatDate = (datetime, short) => {
