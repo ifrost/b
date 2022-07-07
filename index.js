@@ -117,7 +117,7 @@
 
     const formatStats = (stats) => {
         var s = stats.stats;
-        return `${stats.name}: ${s.amount.total} ml (${s.amount.bottle}🍼${s.amount.breast}🤱) ${s.duration.total} min (${s.duration.bottle}🍼${s.duration.breast}🤱) (every: ${s.feedFreq}h)`
+        return `${stats.name}: ${s.amount.total} ml (${s.amount.bottle}🍼${s.amount.breast}🤱) ${s.duration.total} min (${s.duration.bottle}🍼${s.duration.breast}🤱) (${s.count}🖐️ ${s.feedFreq}h)`
     }
 
     const formatDate = (datetime, short) => {
@@ -126,6 +126,7 @@
 
     const getStats = (logs) => {
         const stats = {
+            count: logs.length,
             amount: {breast: 0, bottle: 0, total: 0},
             duration: {breast: 0, bottle: 0, total: 0},
             feedFreq: logs.length >= 2 ? ((logs[0].startTimestamp - logs[logs.length - 1].startTimestamp) / logs.length / 1000 / 60 / 60).toFixed(1) : '-',
