@@ -63,18 +63,19 @@
         const mainStats = createStats(mainWindows, logs);
         const otherStats = createStats(otherWindows, logs);
         var formattedMainStats = mainStats.map(formatStats).join('\n');
-        var formattedLogs = logs.splice(0,20).map(formatLog).join('\n');
+        var formattedLogs = logs.concat().splice(0, 20).map(formatLog).join('\n');
         var formattedOtherStats = otherStats.map(formatStats).join('\n');
 
-        const output = `${formattedMainStats}\n---\n${formattedLogs}\n---\n${formattedOtherStats}`
+        var nextFeedTime = predictNextFeedTime(logs);
+
+        const output = `${formattedMainStats}\n---\nnext? ${nextFeedTime}\n${formattedLogs}\n---\n${formattedOtherStats}`
         document.body.innerHTML = `<pre>${output}<pre>`;
-        console.log(output)
     }
 
     const createStats = (windows, logs) => {
         return windows.map((w) => {
-            const from =  (new Date()).getTime() - w.from * 60 * 60 * 1000
-            const to =  (new Date()).getTime() - (w.to || 0) * 60 * 60 * 1000
+            const from = (new Date()).getTime() - w.from * 60 * 60 * 1000
+            const to = (new Date()).getTime() - (w.to || 0) * 60 * 60 * 1000
             const filtered = logs.filter((l) => l.startTimestamp >= from && l.endTimestamp <= to)
             return {
                 name: w.name,
@@ -143,7 +144,7 @@
 
     const formatStats = (stats) => {
         var s = stats.stats;
-        return `${stats.name}: ${s.amount.total} ml (${s.amount.bottle}🍼${s.amount.breast}🤱) ${s.duration.total}′ (${s.duration.bottle}🍼${s.duration.breast}🤱) (${s.count}🖐️${stats.days > 1 ?  (s.count/stats.days).toFixed(1) + '☝️' : ''} ${s.feedFreq}h)`
+        return `${stats.name}: ${s.amount.total} ml (${s.amount.bottle}🍼${s.amount.breast}🤱) ${s.duration.total}′ (${s.duration.bottle}🍼${s.duration.breast}🤱) (${s.count}🖐️${stats.days > 1 ? (s.count / stats.days).toFixed(1) + '☝️' : ''} ${s.feedFreq}h)`
     }
 
     const formatDate = (datetime, short) => {
@@ -164,6 +165,86 @@
             stats.duration[log.type] += log.duration;
         });
         return stats;
+    }
+
+    const buildMarkov = (logs) => {
+        const data = logs.concat().reverse();
+        const entries = data.map((log, i) => {
+            const next = i !== data.length - 1 ? (data[i + 1].startTimestamp - log.timestamp) / 1000 / 60 / 60 : NaN;
+            const nextA = Math.floor(next);
+            const nextB = next - nextA;
+            const nextRounded = nextA + (nextB >= 0.5 ? 0.5 : 0)
+            return {
+                index: i,
+                log,
+                hour: log.start.getHours() + (log.start.getMinutes() >= 30 ? 0.5 : 0),
+                next: nextRounded,
+                amount: log.amount,
+            }
+        });
+
+        const W = 8;
+        const remaining = entries.concat();
+        const window = remaining.splice(0, W);
+
+        const list = [window];
+        while (remaining.length) {
+            window.shift();
+            window.push(remaining.shift());
+            list.push(
+                window.concat(),
+            );
+        }
+        return list;
+    }
+
+    const calculateDiff = (pattern, current) => {
+        const W = pattern.length;
+        let distance = 0;
+        pattern.forEach((entry, index) => {
+            const hDiffA = Math.abs(entry.hour - current[index].hour);
+            const hDiffB = Math.abs(entry.hour - current[index].hour + 24);
+            const hDistance = Math.min(hDiffA, hDiffB);
+            let nextDistance = 0;
+            if (index !== W - 1) {
+                nextDistance = Math.abs(entry.next - current[index].next);
+            } else {
+                return;
+            }
+
+            let aDistance = Math.abs(entry.amount - current[index].amount);
+
+            const w = (index + 1) / (W - 1);
+            const hW = 0.2;
+            const nW = 0.2;
+            const aW = 0.02;
+            distance += ((hDistance * hW) + (nextDistance * nW) + (aDistance * aW)) * w;
+        });
+
+        return {distance, next: pattern[W - 1].next, amount: pattern[W - 1].amount};
+    }
+
+    const predictNextFeedTime = (logs) => {
+        const markov = buildMarkov(logs);
+        const current = markov[markov.length - 1];
+
+        let scores = [];
+        markov.forEach((list) => {
+            scores.push(calculateDiff(list, current));
+        })
+        scores = scores.filter((s) => !isNaN(s.next));
+        scores.sort((a, b) => a.distance - b.distance);
+
+        const T = 5;
+        let top = scores.concat().slice(0, T).map((s) => s.next);
+        let topA = scores.concat().slice(0, T).map((s) => s.amount);
+        top.sort();
+        const med = (top[2] * 0.1 + top[3] * 0.2 + top[4] * 0.7);
+        const medA = (topA[0] * 0.2 + topA[1] * 0.2 + topA[2] * 0.2 + topA[3] * 0.2 + topA[4] * 0.2);
+
+        const predictedTime = new Date();
+        predictedTime.setTime(current[current.length - 1].log.startTimestamp + med * 60 * 60 * 1000)
+        return formatDate(predictedTime) + ' ' + medA.toFixed(0) + ' ml';
     }
 
     window.onload = load;
