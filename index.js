@@ -35,6 +35,20 @@
             {name: '-12d', from: 24 * 13, to: 24 * 12},
             {name: '-13d', from: 24 * 14, to: 24 * 13},
             {name: '-14d', from: 24 * 15, to: 24 * 14},
+
+            {name: '24+1h', from: 24 - 1, to: -1},
+            {name: '24+2h', from: 24 - 2, to: -2},
+            {name: '24+3h', from: 24 - 3, to: -3},
+            {name: '24+4h', from: 24 - 4, to: -4},
+            {name: '24+5h', from: 24 - 5, to: -5},
+            {name: '24+6h', from: 24 - 6, to: -6},
+            {name: '24+7h', from: 24 - 7, to: -7},
+
+            {name: '6+1h', from: 6 - 1, to: -1},
+            {name: '6+2h', from: 6 - 2, to: -2},
+            {name: '6+3h', from: 6 - 3, to: -3},
+            {name: '6+4h', from: 6 - 4, to: -4},
+            {name: '6+5h', from: 6 - 5, to: -5},
         ];
         const mainStats = createStats(mainWindows, logs);
         const otherStats = createStats(otherWindows, logs);
