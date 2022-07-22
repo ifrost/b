@@ -7,34 +7,36 @@
 
     const load = async () => {
         const logs = await getData();
+        const today = (new Date().getHours()) + (new Date().getMinutes() / 60);
         const mainWindows = [
             {name: '24h', from: 24},
             {name: '12h', from: 12},
             {name: '6h', from: 6},
             {name: '5h', from: 5},
+            {name: 'today', from: today },
         ];
         const otherWindows = [
-            // {name: 'month', from: 24 * 30, days: 30},
+            {name: 'month', from: 24 * 30, days: 30},
             {name: 'week', from: 24 * 7, days: 7},
             {name: 'week-2', from: 24 * 7 * 2, to: 24 * 7, days: 7},
             {name: 'week-3', from: 24 * 7 * 3, to: 24 * 7 * 2, days: 7},
             {name: 'week-4', from: 24 * 7 * 4, to: 24 * 7 * 3, days: 7},
 
-            {name: '-1d', from: 24 * 2, to: 24 * 1},
-            {name: '-2d', from: 24 * 3, to: 24 * 2},
-            {name: '-3d', from: 24 * 4, to: 24 * 3},
-            {name: '-4d', from: 24 * 5, to: 24 * 4},
-            {name: '-5d', from: 24 * 6, to: 24 * 5},
-            {name: '-6d', from: 24 * 7, to: 24 * 6},
-            {name: '-7d', from: 24 * 8, to: 24 * 7},
+            {name: '-1d', from: today + 24, to: today},
+            {name: '-2d', from: today + 24 * 2, to: today + 24 * 1},
+            {name: '-3d', from: today + 24 * 3, to: today + 24 * 2},
+            {name: '-4d', from: today + 24 * 4, to: today + 24 * 3},
+            {name: '-5d', from: today + 24 * 5, to: today + 24 * 4},
+            {name: '-6d', from: today + 24 * 6, to: today + 24 * 5},
+            {name: '-7d', from: today + 24 * 7, to: today + 24 * 6},
+            {name: '-8d', from: today + 24 * 8, to: today + 24 * 7},
 
-            {name: '-8d', from: 24 * 9, to: 24 * 8},
-            {name: '-9d', from: 24 * 10, to: 24 * 9},
-            {name: '-10d', from: 24 * 11, to: 24 * 10},
-            {name: '-11d', from: 24 * 12, to: 24 * 11},
-            {name: '-12d', from: 24 * 13, to: 24 * 12},
-            {name: '-13d', from: 24 * 14, to: 24 * 13},
-            {name: '-14d', from: 24 * 15, to: 24 * 14},
+            {name: '-9d', from: today + 24 * 9, to: today + 24 * 8},
+            {name: '-10d', from: today + 24 * 10, to: today + 24 * 9},
+            {name: '-11d', from: today + 24 * 11, to: today + 24 * 10},
+            {name: '-12d', from: today + 24 * 12, to: today + 24 * 11},
+            {name: '-13d', from: today + 24 * 13, to: today + 24 * 12},
+            {name: '-14d', from: today + 24 * 14, to: today + 24 * 13},
 
             {name: '24+1.0h', from: 24 - 1, to: -1},
             {name: '24+1.5h', from: 24 - 1.5, to: -1.5},
@@ -66,17 +68,27 @@
         var formattedLogs = logs.concat().splice(0, 20).map(formatLog).join('\n');
         var formattedOtherStats = otherStats.map(formatStats).join('\n');
 
-        var nextFeedTime = predictNextFeedTime(logs);
+        var { formatted, entries } = predictNextFeedTime(logs);
 
-        const output = `${formattedMainStats}\n---\nnext? ${nextFeedTime}\n${formattedLogs}\n---\n${formattedOtherStats}`
-        document.body.innerHTML = `<pre>${output}<pre>`;
+        const nextFeedTime = formatted;
+        const output = `${formattedMainStats}\n---\nnext? ${nextFeedTime}\n${formattedLogs}\n---\n${formattedOtherStats}`;
+        const content = document.getElementById('content');
+        content.innerHTML = `<pre>${output}<pre>`;
+        generateChart(entries, { name: 'gaps', label: 'Feeding gaps (h)', getter: (e) => e.nextRaw});
+        generateChart(entries, { name: 'amount', label: 'Amount (ml)', getter: (e) => e.amount});
+        generateChart(entries, { name: 'duration', label: 'Duration (min)', getter: (e) => e.log.duration});
+    }
+
+    const filterByWindow = (w, logs) => {
+        const from = (new Date()).getTime() - w.from * 60 * 60 * 1000;
+        const to = (new Date()).getTime() - (w.to || 0) * 60 * 60 * 1000;
+        const filtered = logs.filter((l) => l.startTimestamp >= from && l.endTimestamp <= to);
+        return filtered;
     }
 
     const createStats = (windows, logs) => {
         return windows.map((w) => {
-            const from = (new Date()).getTime() - w.from * 60 * 60 * 1000
-            const to = (new Date()).getTime() - (w.to || 0) * 60 * 60 * 1000
-            const filtered = logs.filter((l) => l.startTimestamp >= from && l.endTimestamp <= to)
+            const filtered = filterByWindow(w, logs);
             return {
                 name: w.name,
                 days: w.days,
@@ -179,6 +191,7 @@
                 log,
                 hour: log.start.getHours() + (log.start.getMinutes() >= 30 ? 0.5 : 0),
                 next: nextRounded,
+                nextRaw: next,
                 amount: log.amount,
             }
         });
@@ -195,7 +208,7 @@
                 window.concat(),
             );
         }
-        return list;
+        return { list, entries };
     }
 
     const calculateDiff = (pattern, current) => {
@@ -225,7 +238,8 @@
     }
 
     const predictNextFeedTime = (logs) => {
-        const markov = buildMarkov(logs);
+        const { list, entries } = buildMarkov(logs);
+        const markov = list;
         const current = markov[markov.length - 1];
 
         let scores = [];
@@ -244,7 +258,51 @@
 
         const predictedTime = new Date();
         predictedTime.setTime(current[current.length - 1].log.startTimestamp + med * 60 * 60 * 1000)
-        return formatDate(predictedTime) + ' ' + medA.toFixed(0) + ' ml';
+        return { formatted: formatDate(predictedTime) + ' ' + medA.toFixed(0) + ' ml', entries }
+    }
+
+    const generateChart = (entries, options) => {
+        const from = (new Date()).getTime() - 24 * 7 * 60 * 60 * 1000;
+        const to = (new Date()).getTime() - (0) * 60 * 60 * 1000;
+        entries = entries.filter((e) => {
+            return e.log.startTimestamp >= from && e.log.endTimestamp <= to;
+        })
+        const ctx = document.getElementById(options.name);
+        const myChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels:  entries.map((e) => formatDate(e.log.start)),
+                datasets: [{
+                    label: options.label,
+                    data: entries.map(options.getter),
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.2)',
+                        'rgba(54, 162, 235, 0.2)',
+                        'rgba(255, 206, 86, 0.2)',
+                        'rgba(75, 192, 192, 0.2)',
+                        'rgba(153, 102, 255, 0.2)',
+                        'rgba(255, 159, 64, 0.2)'
+                    ],
+                    borderColor: [
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(255, 206, 86, 1)',
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(153, 102, 255, 1)',
+                        'rgba(255, 159, 64, 1)'
+                    ],
+                    borderWidth: 1
+                }
+                ]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
     }
 
     window.onload = load;
