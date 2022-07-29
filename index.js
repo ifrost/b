@@ -21,6 +21,10 @@
             {name: 'week-2', from: 24 * 7 * 2, to: 24 * 7, days: 7},
             {name: 'week-3', from: 24 * 7 * 3, to: 24 * 7 * 2, days: 7},
             {name: 'week-4', from: 24 * 7 * 4, to: 24 * 7 * 3, days: 7},
+            {name: 'week-5', from: 24 * 7 * 5, to: 24 * 7 * 4, days: 7},
+            {name: 'week-6', from: 24 * 7 * 6, to: 24 * 7 * 5, days: 7},
+            {name: 'week-7', from: 24 * 7 * 7, to: 24 * 7 * 6, days: 7},
+            {name: 'week-8', from: 24 * 7 * 8, to: 24 * 7 * 7, days: 7},
 
             {name: '-1d', from: today + 24, to: today},
             {name: '-2d', from: today + 24 * 2, to: today + 24 * 1},
@@ -77,12 +81,48 @@
         generateChart(entries, { name: 'gaps', label: 'Feeding gaps (h)', getter: (e) => e.nextRaw});
         generateChart(entries, { name: 'amount', label: 'Amount (ml)', getter: (e) => e.amount});
         generateChart(entries, { name: 'duration', label: 'Duration (min)', getter: (e) => e.log.duration});
+
+        other2(entries, logs);
+    }
+
+    const other = (entries) => {
+        const stats = {};
+        let total = 0;
+        entries.forEach((entry) => {
+            const h = entry.log.start.getHours();
+            stats[h] = stats[h] || 0;
+            stats[h]++;
+            total++;
+        });
+
+        let csv = ''
+        for (var i in stats) {
+            csv += `${i}, ${stats[i]}\n`;
+        }
+
+        console.log(csv);
+    }
+
+    const other2 = (entries, logs) => {
+        const today = (new Date().getHours()) + (new Date().getMinutes() / 60);
+        const stats = [];
+        for (let i=1; i<45; i++) {
+            const w =  {name: 'a', from: today + 24 * i, to: today + 24 * (i - 1)};
+            const s = createStats([w], logs);
+            stats.push([i, s[0].stats.duration.breast, s[0].stats.duration.bottle]);
+        }
+        // console.log(stats.reverse());
+        let csv = ''
+        stats.reverse().forEach((e) => {
+            csv += `-${e[0]}d, ${e[1]}, ${e[2]}\n`;
+        });
+        console.log(csv);
     }
 
     const filterByWindow = (w, logs) => {
         const from = (new Date()).getTime() - w.from * 60 * 60 * 1000;
         const to = (new Date()).getTime() - (w.to || 0) * 60 * 60 * 1000;
-        const filtered = logs.filter((l) => l.startTimestamp >= from && l.endTimestamp <= to);
+        const filtered = logs.filter((l) => l.startTimestamp >= from && l.startTimestamp <= to);
         return filtered;
     }
 
@@ -265,7 +305,7 @@
         const from = (new Date()).getTime() - 24 * 7 * 60 * 60 * 1000;
         const to = (new Date()).getTime() - (0) * 60 * 60 * 1000;
         entries = entries.filter((e) => {
-            return e.log.startTimestamp >= from && e.log.endTimestamp <= to;
+            return e.log.startTimestamp >= from && e.log.startTimestamp <= to;
         })
         const ctx = document.getElementById(options.name);
         const myChart = new Chart(ctx, {
